@@ -1,0 +1,63 @@
+body {
+    width: 100%;
+    height: 100%;
+    background-image: url(https://images.pexels.com/photos/276514/pexels-photo-276514.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940);
+    background-position: center;
+    background-size: cover;
+}
+
+.btn-auth:focus {
+    box-shadow: 0 0 5px 2px black !important;
+}
+
+.jumbotron {
+    border-radius: 0 !important;
+}
+
+.btn-mail:hover {
+    box-shadow: 0 0 2px 1px black !important;
+}
+
+.btn-mail:focus {
+    box-shadow: none;
+}
+
+#loading {
+    width: 50px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    display: none;
+}
+
+iframe {
+    width: 100%;
+    border: 0;
+    height: 600px;
+    display: flex;
+}
+
+.msg-link {
+    background: none !important;
+    border: none;
+    padding: 0 !important;
+    color: #069;
+    cursor: pointer;
+}
+
+.msg-link:hover {
+    text-decoration: underline;
+}
+
+.msg-link:focus {
+    outline: none;
+    box-shadow: none;
+}
+
+.hover:hover, .active{
+    background-color: black !important;
+    color: white;
+    cursor: pointer;
+}
