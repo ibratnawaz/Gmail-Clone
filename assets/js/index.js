@@ -53,7 +53,7 @@ function updateSigninStatus(isSignedIn) {
     document.getElementById('loading').style.display = 'block';
     document.getElementById('main').style.display = 'flex';
     document.getElementById('content').style.display = 'none';
-    getMessagesId();
+    getMessagesId(document.querySelector('.active'));
   } else {
     authorizeButton.style.display = 'block';
     signoutButton.style.display = 'none';
@@ -71,7 +71,6 @@ function handleAuthClick(event) {
     })
     .then(function () {
       console.log("Sign-in successful");
-      getMessagesId();
     })
     .then(loadClient)
     .catch((err) => {
@@ -97,13 +96,59 @@ function loadClient() {
       });
 }
 
+function createMyElement(tagName, className = '') {
+  let ele = document.createElement(tagName);
+  ele.setAttribute('class', className);
+  return ele;
+}
+
+function createMyTable(tableFor) {
+  let container = document.getElementById('my-table');
+  container.innerHTML = ``;
+  let div = createMyElement('div', 'h5');
+  div.innerHTML = `${tableFor}`;
+  let table = createMyElement('table', 'table table-striped table-inbox hidden');
+  table.setAttribute('id', 'inbox');
+  let thead = createMyElement('thead');
+  let tr = createMyElement('tr');
+  let th1;
+  let th2;
+  let th3;
+  if (tableFor == 'All') {
+    th1 = createMyElement('th');
+    th1.innerHTML = `From`;
+    th2 = createMyElement('th');
+    th2.innerHTML = `Subject`;
+    th3 = createMyElement('th');
+    th3.innerHTML = `Date/Time`;
+    tr.append(th1, th2, th3);
+  } else {
+    th1 = createMyElement('th');
+    th1.innerHTML = `To`;
+    th2 = createMyElement('th');
+    th2.innerHTML = `Subject`;
+    th3 = createMyElement('th');
+    th3.innerHTML = `Edit`;
+    tr.append(th1, th2, th3);
+  }
+  thead.appendChild(tr);
+  let tbody = createMyElement('tbody');
+  tbody.id = `mail-box`;
+  table.append(thead, tbody);
+  container.append(div, table);
+}
+
 // Make sure the client is loaded and sign-in is complete before calling this method.
-function getMessagesId() {
+function getMessagesId(eleBtn) {
   gapi.client.gmail.users.messages.list({
     'userId': 'me',
     'labelIds': 'INBOX',
     'maxResults': 10
   }).then(function (response) {
+    let activeBtn = document.querySelector('.active');
+    activeBtn.classList.remove('active');
+    eleBtn.classList.add('active');
+    createMyTable('All');
     response.result.messages.forEach(obj => {
       getMessage(obj.id);
     });
@@ -120,19 +165,13 @@ function getMessage(msgId) {
   }).then(function (response) {
     let data = response.result.payload
     let from = data.headers.filter(obj => {
-      if (obj.name == 'From') {
-        return obj;
-      }
+      return obj.name == 'From';
     });
     let subject = data.headers.filter(obj => {
-      if (obj.name == 'Subject') {
-        return obj;
-      }
+      return obj.name == 'Subject';
     });
     let date = data.headers.filter(obj => {
-      if (obj.name == 'Date') {
-        return obj;
-      }
+      return obj.name == 'Date';
     });
 
     setInbox(from, subject, date, msgId, getBody(data));
@@ -256,14 +295,14 @@ function sendEmail(ele, to, sub, msg) {
 }
 
 function sendMessage(headersObj, message, callback) {
-  var email = '';
+  let email = '';
 
-  for (var header in headersObj)
+  for (let header in headersObj)
     email += header += ": " + headersObj[header] + "\r\n";
 
   email += "\r\n" + message;
 
-  var sendRequest = gapi.client.gmail.users.messages.send({
+  let sendRequest = gapi.client.gmail.users.messages.send({
     'userId': 'me',
     'resource': {
       'raw': window.btoa(email).replace(/\+/g, '-').replace(/\//g, '_')
@@ -282,4 +321,141 @@ function clearModal() {
 
   document.getElementById('btn-send').removeAttribute('disabled');
   alert('Message send successfully!')
+}
+
+function getDraftsID(eleBtn) {
+  gapi.client.gmail.users.drafts.list({
+    'userId': 'me',
+  }).then(function (response) {
+
+    let activeBtn = document.querySelector('.active');
+    activeBtn.classList.remove('active');
+    eleBtn.classList.add('active');
+    document.getElementById('loading').style.display = 'block';
+    createMyTable('Draft');
+    if (response.result.resultSizeEstimate) {
+      response.result.drafts.forEach(obj => {
+        getDraftMessage(obj.id);
+      });
+    } else {
+      document.getElementById('loading').style.display = 'none';
+      let tr = createMyElement('tr');
+      let td = createMyElement('td', 'text-center');
+      td.innerHTML = `No drafts !!`;
+      td.setAttribute('colspan', "3");
+      tr.appendChild(td);
+      document.getElementById('mail-box').appendChild(tr);
+    }
+  }).catch(err => {
+    console.error(err);
+  });
+}
+
+function getDraftMessage(draftId) {
+  gapi.client.gmail.users.drafts.get({
+    'userId': 'me',
+    'id': draftId
+  }).then(function (response) {
+    document.getElementById('loading').style.display = 'none';
+    let data = response.result.message.payload;
+
+    let to = data.headers.filter(obj => {
+      return obj.name == "To";
+    });
+
+    try {
+      to = to[0].value.split('<');
+      to = to[1].split('>');
+    } catch (error) {
+      to = to;
+    }
+
+    let subject = data.headers.filter(obj => {
+      return obj.name == "Subject";
+    });
+
+    let msg = getBody(data);
+    try {
+      msg = msg.split('>');
+      msg = msg[1].split('<');
+    } catch (error) {
+      msg = msg;
+    }
+    let tr = document.createElement('tr');
+    tr.innerHTML = `
+    <td>${to[0]}</td>
+    <td>${subject[0].value}</td>
+    <td><button id="draft-${draftId}" class="btn btn-primary">Edit</button>
+    </td>
+  `;
+    document.getElementById('mail-box').appendChild(tr);
+
+    document.getElementById(`draft-${draftId}`).addEventListener('click', () => {
+      setDraftMsg(to[0], subject[0].value, msg[0], response.result.id);
+    });
+  }).catch(err => {
+    console.error(err);
+  });
+}
+
+
+function setDraftMsg(to, subject, msg, draftID) {
+  $('#draftModal').modal('show');
+  document.getElementById('d-email').value = to;
+  document.getElementById('d-subject').value = subject;
+  document.getElementById('d-msg').innerHTML = msg;
+  document.getElementById('d-ID').value = draftID;
+}
+
+async function sendDraftMsg(ele) {
+
+  let from;
+  let to = document.getElementById('d-email').value;
+  let subject = document.getElementById('d-subject').value;
+  let message = document.getElementById('d-msg').innerHTML;
+  let draftID = document.getElementById('d-ID').value;
+
+  let curUser = gapi.client.gmail.users.getProfile({
+    'userId': 'me'
+  });
+
+  await curUser.execute(function (response) {
+    from = response.emailAddress;
+  });
+
+  let email = `From:${from}\nTo:${to}\nSubject:${subject}\n\n${message}`;
+  // let headersObj = {
+  //   'To': document.getElementById('d-email').value,
+  //   'Subject': document.getElementById('d-subject').value
+  // };
+
+  // for (let header in headersObj)
+  //   email += header += ": " + headersObj[header] + "\r\n";
+
+  // email += "\r\n" + message;
+
+  let request = gapi.client.gmail.users.drafts.update({
+    'userId': 'me',
+    'id': draftID,
+    'message': {
+      'raw': btoa(email).replace(/\+/g, '-').replace(/\//g, '_')
+    },
+    'send': false,
+  });
+
+  await request.execute(function (response) {
+    console.log('response=' + JSON.stringify(response, null, 2));
+  });
+
+  let sendRequest = gapi.client.gmail.users.drafts.send({
+    'userId': 'me',
+    'resource': {
+      'id': draftID,
+    }
+  });
+  await sendRequest.execute(function (response) {
+    console.log('response=' + JSON.stringify(response, null, 2));
+  });
+  alert('Mail send successfully!!');
+  window.location.reload();
 }

@@ -22,16 +22,6 @@ body {
     box-shadow: none;
 }
 
-#loading {
-    width: 50px;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    color: white;
-    display: none;
-}
-
 iframe {
     width: 100%;
     border: 0;
@@ -60,4 +50,24 @@ iframe {
     background-color: black !important;
     color: white;
     cursor: pointer;
+}
+
+.load-container {
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 1;
+    display: none;
+}
+
+.loading {
+    width: 50px;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
 }
