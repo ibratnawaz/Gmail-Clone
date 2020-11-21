@@ -47,18 +47,19 @@ function initClient() {
  *  appropriately. After a sign-in, the API is called.
  */
 function updateSigninStatus(isSignedIn) {
+
   if (isSignedIn) {
     authorizeButton.style.display = 'none';
     signoutButton.style.display = 'block';
     document.getElementById('loading').style.display = 'block';
-    document.getElementById('main').style.display = 'flex';
-    document.getElementById('content').style.display = 'none';
-    getMessagesId(document.querySelector('.active'));
+    // document.getElementById('main').style.display = 'flex';
+    // document.getElementById('content').style.display = 'none';
+    getMessagesId(document.querySelector('.active'),'INBOX');
   } else {
     authorizeButton.style.display = 'block';
     signoutButton.style.display = 'none';
-    document.getElementById('main').style.display = 'none';
-    document.getElementById('content').style.display = 'block';
+    // document.getElementById('main').style.display = 'none';
+    // document.getElementById('content').style.display = 'block';
   }
 }
 
@@ -82,7 +83,15 @@ function handleAuthClick(event) {
  *  Sign out the user upon button click.
  */
 function handleSignoutClick(event) {
-  gapi.auth2.getAuthInstance().signOut();
+
+  let toast = document.getElementById("snackbar");
+  toast.innerHTML=`You will be Sign out now`
+  toast.className = "show";
+  setTimeout(function () {
+    toast.className = toast.className.replace("show", "");
+    gapi.auth2.getAuthInstance().signOut();
+    window.location.replace('index.html');
+  }, 1500);
 }
 
 function loadClient() {
@@ -122,6 +131,14 @@ function createMyTable(tableFor) {
     th3 = createMyElement('th');
     th3.innerHTML = `Date/Time`;
     tr.append(th1, th2, th3);
+  } else if(tableFor == 'Sent'){
+    th1 = createMyElement('th');
+    th1.innerHTML = `To`;
+    th2 = createMyElement('th');
+    th2.innerHTML = `Subject`;
+    th3 = createMyElement('th');
+    th3.innerHTML = `Date/Time`;
+    tr.append(th1, th2, th3);
   } else {
     th1 = createMyElement('th');
     th1.innerHTML = `To`;
@@ -139,18 +156,22 @@ function createMyTable(tableFor) {
 }
 
 // Make sure the client is loaded and sign-in is complete before calling this method.
-function getMessagesId(eleBtn) {
+function getMessagesId(eleBtn, mailType) {
   gapi.client.gmail.users.messages.list({
     'userId': 'me',
-    'labelIds': 'INBOX',
-    'maxResults': 10
+    'labelIds': mailType,
+    'maxResults': 15
   }).then(function (response) {
     let activeBtn = document.querySelector('.active');
     activeBtn.classList.remove('active');
     eleBtn.classList.add('active');
-    createMyTable('All');
+    if(mailType=='INBOX'){
+      createMyTable('All');
+    }else{
+      createMyTable('Sent');
+    }
     response.result.messages.forEach(obj => {
-      getMessage(obj.id);
+      getMessage(obj.id, mailType);
     });
     document.getElementById('loading').style.display = 'none';
   }).catch(err => {
@@ -158,15 +179,22 @@ function getMessagesId(eleBtn) {
   });
 }
 
-function getMessage(msgId) {
+function getMessage(msgId, mailType) {
   gapi.client.gmail.users.messages.get({
     'userId': 'me',
     'id': msgId,
   }).then(function (response) {
     let data = response.result.payload
-    let from = data.headers.filter(obj => {
-      return obj.name == 'From';
-    });
+    let toOrFrom;
+    if (mailType=="All") {
+      toOrFrom = data.headers.filter(obj => {
+        return obj.name == 'From';
+      });
+    } else {
+      toOrFrom = data.headers.filter(obj => {
+        return obj.name == 'To';
+      });
+    }
     let subject = data.headers.filter(obj => {
       return obj.name == 'Subject';
     });
@@ -174,7 +202,7 @@ function getMessage(msgId) {
       return obj.name == 'Date';
     });
 
-    setInbox(from, subject, date, msgId, getBody(data));
+    setInbox(toOrFrom, subject, date, msgId, getBody(data));
   }).catch(err => {
     console.error(err);
   });
@@ -320,7 +348,7 @@ function clearModal() {
   document.getElementById('message').value = '';
 
   document.getElementById('btn-send').removeAttribute('disabled');
-  alert('Message send successfully!')
+  toastMessage();
 }
 
 function getDraftsID(eleBtn) {
@@ -409,6 +437,7 @@ function setDraftMsg(to, subject, msg, draftID) {
 
 async function sendDraftMsg(ele) {
 
+  ele.disabled=true;
   let from;
   let to = document.getElementById('d-email').value;
   let subject = document.getElementById('d-subject').value;
@@ -453,9 +482,23 @@ async function sendDraftMsg(ele) {
       'id': draftID,
     }
   });
+  
   await sendRequest.execute(function (response) {
     console.log('response=' + JSON.stringify(response, null, 2));
   });
-  alert('Mail send successfully!!');
-  window.location.reload();
+  
+  $('#draftModal').modal('hide');
+  toastMessage();
+  setTimeout(() => {
+    window.location.reload();
+  }, 1000);
+}
+
+function toastMessage(){
+  let toast = document.getElementById("snackbar");
+  toast.innerHTML=`Message Sent`
+  toast.className = "show";
+  setTimeout(function () {
+    toast.className = toast.className.replace("show", "");
+  }, 1500);
 }
