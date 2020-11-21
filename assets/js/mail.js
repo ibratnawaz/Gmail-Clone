@@ -186,7 +186,7 @@ function getMessage(msgId, mailType) {
   }).then(function (response) {
     let data = response.result.payload
     let toOrFrom;
-    if (mailType == "All") {
+    if (mailType == "INBOX") {
       toOrFrom = data.headers.filter(obj => {
         return obj.name == 'From';
       });
