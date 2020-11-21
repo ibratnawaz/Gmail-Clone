@@ -54,7 +54,7 @@ function updateSigninStatus(isSignedIn) {
     document.getElementById('loading').style.display = 'block';
     // document.getElementById('main').style.display = 'flex';
     // document.getElementById('content').style.display = 'none';
-    getMessagesId(document.querySelector('.active'),'INBOX');
+    getMessagesId(document.querySelector('.active'), 'INBOX');
   } else {
     authorizeButton.style.display = 'block';
     signoutButton.style.display = 'none';
@@ -85,7 +85,7 @@ function handleAuthClick(event) {
 function handleSignoutClick(event) {
 
   let toast = document.getElementById("snackbar");
-  toast.innerHTML=`You will be Sign out now`
+  toast.innerHTML = `You will be Sign out now`
   toast.className = "show";
   setTimeout(function () {
     toast.className = toast.className.replace("show", "");
@@ -131,7 +131,7 @@ function createMyTable(tableFor) {
     th3 = createMyElement('th');
     th3.innerHTML = `Date/Time`;
     tr.append(th1, th2, th3);
-  } else if(tableFor == 'Sent'){
+  } else if (tableFor == 'Sent') {
     th1 = createMyElement('th');
     th1.innerHTML = `To`;
     th2 = createMyElement('th');
@@ -165,9 +165,9 @@ function getMessagesId(eleBtn, mailType) {
     let activeBtn = document.querySelector('.active');
     activeBtn.classList.remove('active');
     eleBtn.classList.add('active');
-    if(mailType=='INBOX'){
+    if (mailType == 'INBOX') {
       createMyTable('All');
-    }else{
+    } else {
       createMyTable('Sent');
     }
     response.result.messages.forEach(obj => {
@@ -186,7 +186,7 @@ function getMessage(msgId, mailType) {
   }).then(function (response) {
     let data = response.result.payload
     let toOrFrom;
-    if (mailType=="All") {
+    if (mailType == "All") {
       toOrFrom = data.headers.filter(obj => {
         return obj.name == 'From';
       });
@@ -322,7 +322,7 @@ function sendEmail(ele, to, sub, msg) {
   return false;
 }
 
-function sendMessage(headersObj, message, callback) {
+async function sendMessage(headersObj, message, callback) {
   let email = '';
 
   for (let header in headersObj)
@@ -337,18 +337,18 @@ function sendMessage(headersObj, message, callback) {
     }
   });
 
-  return sendRequest.execute(callback);
+  await sendRequest.execute(callback);
+  toastMessage('Message sent');
 }
 
 function clearModal() {
-  $('#composeModal').modal('hide');
-
+  
   document.getElementById('email').value = '';
   document.getElementById('subject').value = '';
   document.getElementById('message').value = '';
-
+  
   document.getElementById('btn-send').removeAttribute('disabled');
-  toastMessage();
+  $('#composeModal').modal('hide');
 }
 
 function getDraftsID(eleBtn) {
@@ -437,7 +437,7 @@ function setDraftMsg(to, subject, msg, draftID) {
 
 async function sendDraftMsg(ele) {
 
-  ele.disabled=true;
+  ele.disabled = true;
   let from;
   let to = document.getElementById('d-email').value;
   let subject = document.getElementById('d-subject').value;
@@ -482,23 +482,60 @@ async function sendDraftMsg(ele) {
       'id': draftID,
     }
   });
-  
+
   await sendRequest.execute(function (response) {
     console.log('response=' + JSON.stringify(response, null, 2));
   });
-  
+
   $('#draftModal').modal('hide');
-  toastMessage();
+  toastMessage('Message sent');
   setTimeout(() => {
     window.location.reload();
   }, 1000);
 }
 
-function toastMessage(){
+async function createDraftMsg() {
+  let to = document.getElementById('email').value;
+  let subject = document.getElementById('subject').value;
+  let message = document.getElementById('message').value;
+  let from;
+  let curUser = gapi.client.gmail.users.getProfile({
+    'userId': 'me'
+  });
+
+  await curUser.execute(function (response) {
+    from = response.emailAddress;
+  });
+
+  if (to || subject || message) {
+    let email = `From:${from}\nTo:${to}\nSubject:${subject}\n\n${message}`;
+
+    let request = gapi.client.gmail.users.drafts.create({
+      'userId': 'me',
+      'message': {
+        'raw': btoa(email).replace(/\+/g, '-').replace(/\//g, '_')
+      }
+    });
+
+    await request.execute(function (response) {
+      console.log('response=' + JSON.stringify(response, null, 2));
+    });
+
+    // $('#composeModal').modal('hide');
+    clearModal();
+    toastMessage('Message saved as Draft');
+  }
+}
+
+function toastMessage(message) {
   let toast = document.getElementById("snackbar");
-  toast.innerHTML=`Message Sent`
+  toast.innerHTML = `${message}`
   toast.className = "show";
   setTimeout(function () {
     toast.className = toast.className.replace("show", "");
   }, 1500);
 }
+
+$('#composeModal').on('hide.bs.modal', function (e) {
+  createDraftMsg();
+})
