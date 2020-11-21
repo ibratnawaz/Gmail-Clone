@@ -4,3 +4,5 @@
 - inbox, see all mails
 - send mail to others
 - see your draft mails
+- see your sent mails
+- toaster for notification

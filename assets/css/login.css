@@ -2,7 +2,8 @@
 
 html,
 body {
-    background-image: url('http://getwallpapers.com/wallpaper/full/a/5/d/544750.jpg');
+    background: linear-gradient(to right top, #0e37cb, #162eb5, #19269f, #191e8a, #171776);
+    background-image: url(../images/bg-image.jpg);
     background-size: cover;
     background-repeat: no-repeat;
     height: 100%;
